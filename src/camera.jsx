@@ -1,13 +1,16 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
     FilesetResolver,
     HandLandmarker,
     PoseLandmarker,
 } from "@mediapipe/tasks-vision";
 
-export default function PoseHandsCamera() {
+export default function Camera({ onPose }) {
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
+    const [reps, setReps] = useState(0);
+    const exerciseStateRef = useRef({});
+    const lastVideoTimeRef = useRef(-1);
 
     useEffect(() => {
         let handLandmarker;
@@ -58,56 +61,52 @@ export default function PoseHandsCamera() {
         function detect() {
             const video = videoRef.current;
             const canvas = canvasRef.current;
-            const ctx = canvas.getContext("2d");
 
+            if (!video || video.readyState < 2) {
+                animationFrameId = requestAnimationFrame(detect);
+                return;
+            }
+
+            if (video.currentTime === lastVideoTimeRef.current) {
+                animationFrameId = requestAnimationFrame(detect);
+                return;
+            }
+
+            lastVideoTimeRef.current = video.currentTime;
+
+            const ctx = canvas.getContext("2d");
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
 
             const now = performance.now();
 
-            const handResults = handLandmarker.detectForVideo(video, now);
             const poseResults = poseLandmarker.detectForVideo(video, now);
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // ?? Draw Pose Landmarks
-            if (poseResults.landmarks) {
-                poseResults.landmarks.forEach((landmarks) => {
-                    landmarks.forEach((point) => {
-                        ctx.beginPath();
-                        ctx.arc(
-                            point.x * canvas.width,
-                            point.y * canvas.height,
-                            4,
-                            0,
-                            2 * Math.PI
-                        );
-                        ctx.fillStyle = "cyan";
-                        ctx.fill();
-                    });
-                });
-            }
+            if (poseResults.landmarks && poseResults.landmarks.length > 0) {
+                const landmarks = poseResults.landmarks[0];
 
-            // ?? Draw Hand Landmarks
-            if (handResults.landmarks) {
-                handResults.landmarks.forEach((landmarks) => {
-                    landmarks.forEach((point) => {
-                        ctx.beginPath();
-                        ctx.arc(
-                            point.x * canvas.width,
-                            point.y * canvas.height,
-                            6,
-                            0,
-                            2 * Math.PI
-                        );
-                        ctx.fillStyle = "lime";
-                        ctx.fill();
-                    });
+                if (onPose) {
+                    onPose(landmarks);
+                }
+                poseResults.landmarks[0].forEach((point) => {
+                    ctx.beginPath();
+                    ctx.arc(
+                        point.x * canvas.width,
+                        point.y * canvas.height,
+                        4,
+                        0,
+                        2 * Math.PI
+                    );
+                    ctx.fillStyle = "cyan";
+                    ctx.fill();
                 });
             }
 
             animationFrameId = requestAnimationFrame(detect);
         }
+
 
         setup();
 
