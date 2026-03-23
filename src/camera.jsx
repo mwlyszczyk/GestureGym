@@ -8,8 +8,6 @@ import {
 export default function Camera({ onPose }) {
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
-    const [reps, setReps] = useState(0);
-    const exerciseStateRef = useRef({});
     const lastVideoTimeRef = useRef(-1);
 
     useEffect(() => {
@@ -118,7 +116,6 @@ export default function Camera({ onPose }) {
             style={{
                 position: "relative",
                 width: "100%",
-                maxWidth: "600px",
             }}
         >
             <video

@@ -1,39 +1,131 @@
-function calculateAngle(a, b, c) {
-    const radians =
-        Math.atan2(c.y - b.y, c.x - b.x) -
-        Math.atan2(a.y - b.y, a.x - b.x);
+let state = "NOT_READY"
+let reps = 0
+let form = "GOOD"
 
-    let angle = Math.abs((radians * 180) / Math.PI);
+let smoothedLeft = 180
+let smoothedRight = 180
 
-    if (angle > 180) {
-        angle = 360 - angle;
-    }
+const SMOOTHING = 0.5
 
-    return angle;
+const DOWN_ANGLE = 105
+const UP_ANGLE = 150
+
+
+let downFrames = 0
+let upFrames = 0
+const REQUIRED_FRAMES = 3
+
+//Is user in frame?
+
+
+function visible(lm) {
+    return lm.visibility === undefined || lm.visibility > 0.3
 }
 
-let stage = "up";
-let reps = 0;
+function userInFrame(lm) {
+  const required = [11,13,15,12,14,16]; // arms only
+  return required.every(i => visible(lm[i]));
+}
 
-export default function pushupLogic(landmarks) {
+//find angle of line a,b,c
+function angle(a, b, c) {
+    const radians =
+        Math.atan2(c.y - b.y, c.x - b.x) -
+        Math.atan2(a.y - b.y, a.x - b.x)
 
-    const shoulder = landmarks[11];
-    const elbow = landmarks[13];
-    const wrist = landmarks[15];
+    let ang = Math.abs(radians * 180 / Math.PI)
 
-    const elbowAngle = calculateAngle(shoulder, elbow, wrist);
+    if (ang > 180) ang = 360 - ang
 
-    // DOWN position
-    if (elbowAngle < 90) {
-        stage = "down";
+    return ang
+}
+
+
+//avoids mediaPipe jitters
+function smooth(prev, current) {
+    return prev * SMOOTHING + current * (1 - SMOOTHING)
+}
+
+
+//prevents cheating by standing up
+function bodyHorizontal(lm) {
+
+    const shoulderY = (lm[11].y + lm[12].y) / 2
+    const hipY = (lm[23].y + lm[24].y) / 2
+
+    return Math.abs(shoulderY - hipY) < 0.15
+}
+
+
+//threshold for rep to count
+function goodDepth(leftAngle, rightAngle) {
+    return (
+    (leftAngle < 105 && rightAngle < 115) ||
+        (rightAngle < 105 && leftAngle < 115)
+    )
+}
+
+
+export default function pushupEngine(landmarks) {
+
+    form = bodyHorizontal(landmarks) ? "GOOD" : "BAD"
+
+    if (!landmarks || landmarks.length === 0) {
+        state = "NOT_READY"
+        return { state, reps, form }
     }
 
-    // UP position
-    if (elbowAngle > 160 && stage === "down") {
-        stage = "up";
-        reps++;
-        return { repComplete: true, reps };
+    if (!userInFrame(landmarks)) {
+        if (state === "NOT_READY" || state === "READY") {
+            state = "NOT_READY"
+        }
+        return { state, reps, form }
     }
 
-    return { repComplete: false, reps };
+
+    const leftAngle = angle(
+        landmarks[11],
+        landmarks[13],
+        landmarks[15]
+    )
+
+    const rightAngle = angle(
+        landmarks[12],
+        landmarks[14],
+        landmarks[16]
+    )
+
+    smoothedLeft = smooth(smoothedLeft, leftAngle)
+    smoothedRight = smooth(smoothedRight, rightAngle)
+
+    const avgAngle = (smoothedLeft + smoothedRight) / 2
+
+    if (avgAngle < DOWN_ANGLE) {
+        downFrames++
+    } else {
+        downFrames = 0
+    }
+
+    if (avgAngle > UP_ANGLE) {
+        upFrames++
+    } else {
+        upFrames = 0
+    }
+    // READY detection
+    if (upFrames >= REQUIRED_FRAMES && state === "NOT_READY") {
+        state = "READY"
+    }
+
+    // Going down
+    if (downFrames >= REQUIRED_FRAMES && state === "READY") {
+        state = "DOWN"
+    }
+
+    // Coming back up (rep complete)
+    if (upFrames >= REQUIRED_FRAMES && state === "DOWN") {
+        reps++
+        state = "READY"
+        return { state: "REP_COMPLETE", reps }
+    }
+    return { state, reps, form }
 }
