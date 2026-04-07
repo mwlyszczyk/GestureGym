@@ -1,36 +1,51 @@
-const MOCK_SCORES = [
-  { name: "Ali", exercise: "Push-ups", reps: 24 },
-  { name: "Max", exercise: "Squats", reps: 30 },
-  { name: "Nhahin", exercise: "Jumping Jacks", reps: 40 },
-];
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 
-export default function Leaderboard({ onBackHome }) {
-  return (
-    <div>
-      <h2 style={{ color: "white" }}>Leaderboard (Mock Data)</h2>
+export default function Leaderboard() {
+    const [scores, setScores] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-      <div style={{ maxWidth: "420px", margin: "0 auto", textAlign: "left" }}>
-        {MOCK_SCORES.map((row, i) => (
-          <div
-            key={i}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              padding: "10px",
-              borderBottom: "1px solid #444",
-              color: "white",
-            }}
-          >
-            <span>{row.name}</span>
-            <span>{row.exercise}</span>
-            <span>{row.reps} reps</span>
-          </div>
-        ))}
-      </div>
+    useEffect(() => {
+        const fetchLeaderboard = async () => {
+            try {
+                const res = await axios.get("http://localhost:8000/api/leaderboard/");
+                setScores(res.data);
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
 
-      <div style={{ marginTop: "15px" }}>
-        <button onClick={onBackHome}>Back to Home</button>
-      </div>
-    </div>
-  );
+        fetchLeaderboard();
+    }, []);
+
+    if (loading) {
+        return <p style={{ textAlign: "center" }}>Loading leaderboard...</p>;
+    }
+
+    return (
+        <div style={{ maxWidth: "500px", margin: "50px auto", textAlign: "center", color: "white" }}>
+            <h2>Leaderboard</h2>
+
+            <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "20px", color: "white" }}>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th> Username</th>
+                        <th>Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {scores.map((entry, index) => (
+                        <tr key={index}>
+                            <td>{index + 1}</td>
+                            <td>{entry.username}</td>
+                            <td>{entry.score}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
 }

@@ -20,6 +20,7 @@ export default function Pushup() {
     const [reps, setReps] = useState(0);
     const [error, setError] = useState("");
     const [form, setForm] = useState("");
+    const [message, setMessage] = useState("");
 
     function handlePose(landmarks) {
         const result = pushupEngine(landmarks);
@@ -70,6 +71,39 @@ export default function Pushup() {
         
     }
 
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+            setMessage("You must be logged in first");
+            return;
+        }
+
+        try {
+            await axios.post(
+                "http://localhost:8000/api/submit-score/",
+                { score: parseInt(reps) },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
+
+            setMessage("Score submitted!");
+            setReps("");
+        } catch (err) {
+            console.log(err.response);
+            alert(JSON.stringify(err.response?.data));
+            setMessage(
+                "Error: " +
+                (err.response?.data?.detail || "Could not submit score")
+            );
+        }
+    };
+
     return (
         <div>
             <h2>Pushups</h2>
@@ -80,6 +114,13 @@ export default function Pushup() {
             <h2>Form: {form}</h2>
 
             <Camera onPose={handlePose} />
+
+            <form onSubmit={handleSubmit}>
+            <button type="submit" style={{ padding: "10px 20px" }}>
+                Submit Score
+                </button>
+            </form>
+            {message && <p>{message}</p>}
         </div>
     );
 }

@@ -15,6 +15,30 @@ export default function Home({ onStart }) {
               Select
             </button>
           </Link>
+        <p></p>
+          <Link to="/Register" className="link">
+              <button>
+                Register
+              </button>
+          </Link>
+          <p></p>
+          <Link to="/Login" className="link">
+              <button>
+                Login
+              </button>
+          </Link>
+          <p></p>
+          <Link to="/ScoreTest" className="link">
+              <button>
+              upload scores
+              </button>
+          </Link>
+          <p></p>
+          <Link to="/Leaderboard" className="link">
+              <button>
+                leaderboard
+              </button>
+          </Link>
     </div>
   );
 }
