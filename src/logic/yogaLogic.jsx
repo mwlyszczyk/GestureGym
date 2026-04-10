@@ -29,6 +29,7 @@ function angle(a, b, c) {
 
 
 
+
 // Mountain
 function checkMountain(lm) {
     const feedback = []

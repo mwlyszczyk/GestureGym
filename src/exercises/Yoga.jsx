@@ -9,6 +9,8 @@ const levels = {
     advanced: ["Warrior3", "HalfMoon", "Pistol"]
 };
 
+
+
 //const flow = ["Mountain", "Warrior", "Tree"];
 
 export default function Yoga() {
@@ -23,18 +25,29 @@ export default function Yoga() {
     const [locked, setLocked] = useState(false);
     const [debug, setDebug] = useState({});
     const [level, setLevel] = useState("beginner");
+    const [phase, setPhase] = useState("POSE");
+    const [transitionStart, setTransitionStart] = useState();
+    const [holdTimeReached, setHoldTimeReached] = useState(false);
     
+    
+        
     
 
 
     const startRef = useRef(null);
     const lockedRef = useRef(false);
+    const lostFramesRef = useRef(0);
     
     
 
     const targetPose = levels[level][step];
+    const next = 
+        step < levels[level].length - 1
+            ? levels[level][step + 1]
+            : null;
 
     const targetPoseRef = useRef(targetPose);
+    const nextRef = useRef(next);
 
     function nextPose() {
         if (step < levels[level].length - 1) {
@@ -69,9 +82,36 @@ export default function Yoga() {
         Pistol: "hard"
     };
 
+    const transitions = {
+        Mountain: "Lift one foot for Tree pose",
+        Tree: "Step back into Warrior",
+        Warrior: "Stand tall for next pose"
+    };
+
     useEffect(() => {
         targetPoseRef.current = targetPose;
     }, [targetPose]);
+
+    // Transition functions
+
+    function movingToTree(lm) {
+        return (
+            lm[27].y < lm[26].y || // foot lifting
+            lm[28].y < lm[25].y
+        );
+    }
+
+    function movingToWarrior(lm) {
+        return Math.abs(lm[27].x - lm[28].x) > 0.2; // feet spreading
+    }
+
+    function movingToChair(lm) {
+        return (
+            lm[25].y > lm[23].y || // knees bending
+            lm[26].y > lm[24].y
+        );
+    }
+
 
     function handlePose(landmarks) {
         const currentTarget = targetPoseRef.current;
@@ -79,28 +119,60 @@ export default function Yoga() {
 
         const result = yogaEngine(landmarks, currentTarget);
 
-        setCompleted(true);
+        
+
+       
 
         setState(result.state);
         setDetected(result.detectedPose);
         setConfidence(result.confidence);
         setFeedback(result.feedback);
 
-        setDebug({
-            detectedPose: result.detectedPose,
-            ref: targetPoseRef.current,
-            targetPose: result.targetPose,
-            confidence: result.confidence,
-            state: result.state,
-            feedback: result.feedback
-
-        });
-       
+        
 
         const isLocked = lockedRef.current;
 
+        //Transitions
+
+        const transitionChecks = {
+            Mountain: movingToTree,
+            Tree: movingToWarrior,
+            Warrior: movingToChair
+        };
+
+        if (phase === "TRANSITION") {
+            const elapsed = Date.now() - transitionStart;
+
+            const moveCheck = transitionChecks[currentTarget];
+
+            const moving = moveCheck ? moveCheck(landmarks) : false;
+
+            // allow early transition if movement detected
+            if ((elapsed > 1000 && moving) || elapsed > 2500) {
+                nextPose();
+                setPhase("POSE");
+
+                // reset tracking for next pose
+                lockedRef.current = false;
+                setLocked(false);
+                setCompleted(false);
+                setTime(0);
+                startRef.current = null;
+            }
+
+            return;
+        }
+
+        
+
         // 1. LOST POSE
-        if (isLocked && result.state !== "HOLDING") {
+        if (result.state !== "HOLDING") {
+            lostFramesRef.current++;
+        } else {
+            lostFramesRef.current = 0;
+        }
+
+        if (isLocked && lostFramesRef.current > 10) {
             console.log("LOST POSE");
 
             lockedRef.current = false;
@@ -111,7 +183,7 @@ export default function Yoga() {
         }
 
         // 2. LOCK POSE
-        if (!isLocked && result.state === "HOLDING") {
+        if (!isLocked.current && result.state === "HOLDING") {
             console.log("LOCKED");
 
             lockedRef.current = true;
@@ -121,18 +193,43 @@ export default function Yoga() {
         }
 
         // 3. TIMER
-        if (lockedRef.current && startRef.current) {
+        if (lockedRef.current && startRef.current !== null) {
             const duration = Math.floor(
                 (Date.now() - startRef.current) / 1000
             );
 
+            console.log("TIMER RUNNING:", duration);
+
             setTime(duration);
 
-            if (duration >= 30 && !completed) {
+            if (duration >= 10 && !completed) {
                 console.log("COMPLETED");
+
                 setCompleted(true);
+                setPhase("TRANSITION");
+                setTransitionStart(Date.now());
+
+                return;
             }
         }
+
+        setDebug({
+            detectedPose: result.detectedPose,
+            ref: targetPoseRef.current,
+            targetPose: result.targetPose,
+            confidence: result.confidence,
+            state: result.state,
+            locked: lockedRef.current,
+            phase,
+            completed,
+            feedback: result.feedback,
+            time
+
+
+        });
+
+
+        
     }
 
    if (step === 9) {
@@ -148,16 +245,19 @@ export default function Yoga() {
             <h3>Target Pose: {targetPose}</h3>
             <h3>Detected Pose: {detected || "None"}</h3>
 
-            <h3>State: {state}</h3>
+            {/*<h3>State: {state}</h3>*/}
             <h3>Hold Time: {time}s</h3>
 
-            <h3>Status:
+            <h3>Phase: {phase}</h3>
+            <h3>completed: {completed ? "true":"false"}</h3>
+
+            {/* <h3>Status:
                 {!locked && "Get into position"}
                 {locked && !completed && "Hold the pose..."}
                 {completed && "Pose Complete "}
-            </h3>
+            </h3>*/}
 
-            {/*netx pose button*/}
+            {/*netx pose button
             {completed && (
                 <button
                     onClick={() => {
@@ -174,9 +274,11 @@ export default function Yoga() {
                 </button>
             )}
 
-            <p>{completed ? "You can move on whenever you're ready" : `${5 - time}s remaining`}</p>
+            */}
 
-            {/* feedback to improve form 
+            {/* <p>{completed ? "You can move on whenever you're ready" : `${5 - time}s remaining`}</p> */}
+
+            {/*  feedback to improve form 
 
             {feedback && feedback.length > 0 && (
                 <div style={{
@@ -192,6 +294,12 @@ export default function Yoga() {
                 </div>
             )} 
             */}
+
+            {/*transition instruction*/}
+
+            {phase === "TRANSITION" && (
+                <h2>{transitions[targetPose] || `Move to ${next}`}</h2>
+            )}
             
 
             {/* confidence bar */}
@@ -210,7 +318,9 @@ export default function Yoga() {
 
             <Camera onPose={handlePose} />
 
-             <div style={{
+
+             
+                <div style={{
                 position: "fixed",
                 bottom: 0,
                 left: 0,
@@ -222,16 +332,23 @@ export default function Yoga() {
                 zIndex: 9999
             }}>
                 <div>State: {debug.state}</div>
-                <div>Detected: {debug.detectedPose}</div>
-                <div>Ref: {debug.ref}</div>
+               {/* <div>Detected: {debug.detectedPose}</div>
+                <div>Ref: {debug.ref}</div> */}
                 <div>Target: {debug.targetPose}</div>
-                <div>Confidence: {debug.confidence?.toFixed(2)}</div>
+                {/* <div>Confidence: {debug.confidence?.toFixed(2)}</div> */}
+                <div>Locked: {debug.locked ? "true":"false"}</div>
+                <div>Phase: {debug.phase}</div>
+                <div>completed: {debug.completed ? "true":"false"}</div>
+                <div>Duration: {debug.time}</div>
 
-                <div>Feedback:</div>
-                {debug.feedback?.map((f, i) => (
+                
+                {/*  {debug.feedback?.map((f, i) => (
                     <div key={i}>• {f}</div>
-                ))}
-            </div>
+                ))} */}
+
+
+        </div>
+            
             
         </div>
     );
