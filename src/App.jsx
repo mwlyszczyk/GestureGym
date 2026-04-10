@@ -16,6 +16,7 @@ import Login from "./pages/Login.jsx";
 
 //excercise pages
 import Pushup from "./exercises/Pushup.jsx";
+import Yoga from "./exercises/Yoga.jsx";
 
 function App() {
 
@@ -32,6 +33,7 @@ function App() {
                 <Route path="/Login" element={<Login />} />
                 <Route path="/ScoreTest" element={<ScoreTest />} />
                 <Route path="/Leaderboard" element={<Leaderboard />} />
+                <Route path="/Yoga" element={<Yoga />} />
 
 
             </Routes>

@@ -14,7 +14,12 @@ export default function ExerciseSelect() {
              <button>
               Pushups
             </button>
-          </Link>
+              </Link>
+              <Link to="/Yoga" className="link">
+                  <button>
+                  Yoga
+                  </button>
+              </Link>
           <Link to="/Squat">
               <button>
               Squats

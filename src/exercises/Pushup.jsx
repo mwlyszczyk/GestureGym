@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Camera from "../camera.jsx";
 import pushupEngine from "../logic/pushupLogic.jsx";
+import axios from "axios";
 
 const ErrPopup = ({ err }) => {
     if (!err) return null;
