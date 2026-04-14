@@ -1,6 +1,9 @@
 let state = "NOT_READY"
 let confidence = 0
 
+let lastFeedback = [];
+let feedbackTimer = null;
+
 
 const BUILD = 1.5
 const DECAY = 0.92
@@ -219,8 +222,8 @@ function checkLunge(lm) {
     }
 
     const backLegStraight =
-        (leftBent && rightKnee > 160) ||
-        (rightBent && leftKnee > 160);
+        (leftBent && rightKnee > 140) ||
+        (rightBent && leftKnee > 140);
 
     if (!backLegStraight) {
         feedback.push("Keep your back leg straight");
@@ -321,12 +324,14 @@ function checkWarrior3(lm) {
     const feedback = [];
 
     const torsoFlat =
-        Math.abs(lm[11].y - lm[23].y) < 0.05;
+        Math.abs(lm[11].y - lm[23].y) < 0.2 ||
+        Math.abs(lm[12].y - lm[24].y) < 0.2;
 
     if (!torsoFlat) feedback.push("Lean forward");
 
     const legLifted =
-        lm[27].y < lm[23].y;
+        (lm[27].y < lm[23].y) ||
+        (lm[28].y < lm[24].y);
 
     if (!legLifted) feedback.push("Lift your back leg");
 
@@ -348,37 +353,54 @@ export default function yogaEngine(landmarks, targetPose) {
         //return { state, detected: false, feedback: [] }
     }
 
-    const checks = {
-        Mountain: checkMountain(landmarks),
-        Tree: checkTree(landmarks),
-        Warrior: checkWarrior(landmarks),
-        Chair: checkChair(landmarks),
-        Triangle: checkTriangle(landmarks),
-        Lunge: checkLunge(landmarks),
-        Warrior3: checkWarrior3(landmarks),
-        HalfMoon: checkHalfMoon(landmarks),
-        Pistol: checkPistol(landmarks)
-    };
+   
+    let result = { detected: false, feedback: [] };
 
-    if (targetPose !== "Mountain") {
-        checks.Mountain.detected = false;
+    switch (targetPose) {
+        case "Mountain":
+            result = checkMountain(landmarks);
+            break;
+        case "Tree":
+            result = checkTree(landmarks);
+            break;
+        case "Warrior":
+            result = checkWarrior(landmarks);
+            break;
+        case "Chair":
+            result = checkChair(landmarks);
+            break;
+        case "Triangle":
+            result = checkTriangle(landmarks);
+            break;
+        case "Lunge":
+            result = checkLunge(landmarks);
+            break;
+        case "Warrior3":
+            result = checkWarrior3(landmarks);
+            break;
+        case "HalfMoon":
+            result = checkHalfMoon(landmarks);
+            break;
+        case "Pistol":
+            result = checkPistol(landmarks);
+            break;
     }
 
-    const detectedPose = Object.entries(checks)
-        .find(([_, val]) => val.detected)?.[0] || null;
+    const correct = result.detected;
 
-    console.log({
+   
+
+   /* console.log({
         Mountain: checks.Mountain.detected,
         Tree: checks.Tree.detected,
         Warrior: checks.Warrior.detected,
         detectedPose,
         targetPose
-    });
+    });*/
 
-    const correct = detectedPose === targetPose;
+    
 
-    const result = checks[targetPose] || { detected: false, feedback: [] };
-
+    
     //CONFIDENCE
     if (correct) {
         confidence += BUILD;
@@ -392,11 +414,27 @@ export default function yogaEngine(landmarks, targetPose) {
     // STATE
     state = confidence >= THRESHOLD ? "HOLDING" : "SEARCHING";
 
+    const newFeedback = result.feedback || [];
+
+    // Compare arrays
+    const isSame =
+        JSON.stringify(newFeedback) === JSON.stringify(lastFeedback);
+
+    // If feedback changed -> delay update
+    if (!isSame) {
+        clearTimeout(feedbackTimer);
+
+        feedbackTimer = setTimeout(() => {
+            lastFeedback = newFeedback;
+        }, 400); // <- tweak this (300–600ms feels best)
+    }
+
+    // Return stable feedback
     return {
         state,
-        detectedPose,
+        detectedPose: correct ? targetPose : null,
         targetPose,
         confidence,
-        feedback: result.feedback || []
-    }
+        feedback: lastFeedback
+    };
 }

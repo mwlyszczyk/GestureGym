@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import path
 from accounts.views import register, submit_score, leaderboard
 from rest_framework_simplejwt.views import TokenObtainPairView
+from accounts.views import current_user
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -26,4 +27,5 @@ urlpatterns = [
     path('api/login/', TokenObtainPairView.as_view()),
     path('api/submit-score/', submit_score),
     path('api/leaderboard/', leaderboard),
+    path('api/user/', current_user),
 ]

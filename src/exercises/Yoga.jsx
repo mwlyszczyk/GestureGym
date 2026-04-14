@@ -1,355 +1,270 @@
 import { useState, useRef, useEffect } from "react";
 import Camera from "../camera.jsx";
 import yogaEngine from "../logic/yogaLogic.jsx";
+import Navbar from "../components/Navbar";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 
-
-const levels = {
-    beginner: ["Mountain", "Tree", "Warrior"],
-    intermediate: ["Chair", "Triangle", "Lunge"],
-    advanced: ["Warrior3", "HalfMoon", "Pistol"]
-};
-
-
-
-//const flow = ["Mountain", "Warrior", "Tree"];
+const flow = [
+    "Mountain",
+    "Tree",
+    "Warrior",
+    "Chair",
+    "Triangle",
+    "Lunge",
+    "Warrior3",
+    "HalfMoon",
+    "Pistol"
+];
 
 export default function Yoga() {
-
     const [step, setStep] = useState(0);
     const [state, setState] = useState("");
     const [detected, setDetected] = useState("");
     const [time, setTime] = useState(0);
-    const [confidence, setConfidence] = useState(0)
+    const [confidence, setConfidence] = useState(0);
     const [feedback, setFeedback] = useState([]);
     const [completed, setCompleted] = useState(false);
     const [locked, setLocked] = useState(false);
-    const [debug, setDebug] = useState({});
     const [level, setLevel] = useState("beginner");
     const [phase, setPhase] = useState("POSE");
-    const [transitionStart, setTransitionStart] = useState();
-    const [holdTimeReached, setHoldTimeReached] = useState(false);
-    
-    
-        
-    
-
 
     const startRef = useRef(null);
     const lockedRef = useRef(false);
     const lostFramesRef = useRef(0);
-    
-    
+    const completedRef = useRef(false);
+    const phaseRef = useRef("POSE");
+    const transitionStartRef = useRef(null);
+    const targetPoseRef = useRef(flow[0]);
 
-    const targetPose = levels[level][step];
-    const next = 
-        step < levels[level].length - 1
-            ? levels[level][step + 1]
-            : null;
-
-    const targetPoseRef = useRef(targetPose);
-    const nextRef = useRef(next);
+    const targetPose = flow[step];
+    const next = step < flow.length - 1 ? flow[step + 1] : null;
 
     function nextPose() {
-        if (step < levels[level].length - 1) {
-            setStep(step + 1);
-        } else {
-            // move to next level
-            if (level === "beginner") {
-                setLevel("intermediate");
-            } else if (level === "intermediate") {
-                setLevel("advanced");
-            }
-            else if (level === "advanced") {
-                setStep(9);
-                return;
-            }
+        setStep(prev => {
+            const nextStep = prev + 1;
 
-            setStep(0);
-        }
+            if (nextStep >= flow.length) {
+                setPhase("DONE");
+                return prev;
+            }
+            return nextStep < flow.length ? nextStep : prev;
+        });
     }
 
-    const poseDifficulty = {
-        Mountain: "easy",
-        Tree: "easy",
-        Warrior: "easy",
-
-        Chair: "medium",
-        Triangle: "medium",
-        Lunge: "medium",
-
-        Warrior3: "hard",
-        HalfMoon: "hard",
-        Pistol: "hard"
-    };
-
-    const transitions = {
-        Mountain: "Lift one foot for Tree pose",
-        Tree: "Step back into Warrior",
-        Warrior: "Stand tall for next pose"
-    };
+    
 
     useEffect(() => {
-        targetPoseRef.current = targetPose;
-    }, [targetPose]);
-
-    // Transition functions
-
-    function movingToTree(lm) {
-        return (
-            lm[27].y < lm[26].y || // foot lifting
-            lm[28].y < lm[25].y
-        );
-    }
-
-    function movingToWarrior(lm) {
-        return Math.abs(lm[27].x - lm[28].x) > 0.2; // feet spreading
-    }
-
-    function movingToChair(lm) {
-        return (
-            lm[25].y > lm[23].y || // knees bending
-            lm[26].y > lm[24].y
-        );
-    }
-
+        targetPoseRef.current = flow[step];
+    }, [step]);
 
     function handlePose(landmarks) {
-        const currentTarget = targetPoseRef.current;
-        const difficulty = poseDifficulty[currentTarget];
 
-        const result = yogaEngine(landmarks, currentTarget);
+        // HANDLE TRANSITION PHASE
+        if (phaseRef.current === "TRANSITION") {
+            const elapsed = Date.now() - transitionStartRef.current;
 
-        
+            if (elapsed > 1500) {
+                // Move to next pose
+                nextPose();
 
-       
+                // Reset everything
+                phaseRef.current = "POSE";
+                setPhase("POSE");
+
+                lockedRef.current = false;
+                setLocked(false);
+
+                completedRef.current = false;
+                setCompleted(false);
+
+                setTime(0);
+                startRef.current = null;
+                transitionStartRef.current = null;
+
+                setConfidence(0);
+
+                return; // IMPORTANT: stop further processing
+            }
+
+            return; // still transitioning, do nothing else
+        }
+
+        const result = yogaEngine(landmarks, targetPoseRef.current);
 
         setState(result.state);
         setDetected(result.detectedPose);
         setConfidence(result.confidence);
         setFeedback(result.feedback);
 
-        
-
-        const isLocked = lockedRef.current;
-
-        //Transitions
-
-        const transitionChecks = {
-            Mountain: movingToTree,
-            Tree: movingToWarrior,
-            Warrior: movingToChair
-        };
-
-        if (phase === "TRANSITION") {
-            const elapsed = Date.now() - transitionStart;
-
-            const moveCheck = transitionChecks[currentTarget];
-
-            const moving = moveCheck ? moveCheck(landmarks) : false;
-
-            // allow early transition if movement detected
-            if ((elapsed > 1000 && moving) || elapsed > 2500) {
-                nextPose();
-                setPhase("POSE");
-
-                // reset tracking for next pose
-                lockedRef.current = false;
-                setLocked(false);
-                setCompleted(false);
-                setTime(0);
-                startRef.current = null;
-            }
-
-            return;
-        }
-
-        
-
-        // 1. LOST POSE
+        // LOST POSE
         if (result.state !== "HOLDING") {
             lostFramesRef.current++;
         } else {
             lostFramesRef.current = 0;
         }
 
-        if (isLocked && lostFramesRef.current > 10) {
-            console.log("LOST POSE");
-
+        if (lockedRef.current && lostFramesRef.current > 10) {
             lockedRef.current = false;
             setLocked(false);
-
             startRef.current = null;
             setTime(0);
         }
 
-        // 2. LOCK POSE
-        if (!isLocked.current && result.state === "HOLDING") {
-            console.log("LOCKED");
-
+        // LOCK POSE
+        if (!lockedRef.current && result.state === "HOLDING") {
             lockedRef.current = true;
-            setLocked(true);
-
             startRef.current = Date.now();
+            setLocked(true);
         }
 
-        // 3. TIMER
-        if (lockedRef.current && startRef.current !== null) {
+        // TIMER
+        if (lockedRef.current && startRef.current) {
             const duration = Math.floor(
                 (Date.now() - startRef.current) / 1000
             );
 
-            console.log("TIMER RUNNING:", duration);
-
             setTime(duration);
 
-            if (duration >= 10 && !completed) {
-                console.log("COMPLETED");
-
+            if (duration >= 10 && !completedRef.current) {
+                completedRef.current = true;
                 setCompleted(true);
-                setPhase("TRANSITION");
-                setTransitionStart(Date.now());
 
-                return;
+                phaseRef.current = "TRANSITION";
+                setPhase("TRANSITION");
+
+                transitionStartRef.current = Date.now();
             }
         }
-
-        setDebug({
-            detectedPose: result.detectedPose,
-            ref: targetPoseRef.current,
-            targetPose: result.targetPose,
-            confidence: result.confidence,
-            state: result.state,
-            locked: lockedRef.current,
-            phase,
-            completed,
-            feedback: result.feedback,
-            time
-
-
-        });
-
-
-        
     }
 
-   if (step === 9) {
-        return <h2>Workout Complete</h2>;
-   }
-
-    
-
     return (
-        <div>
-            <h2>Yoga Trainer</h2>
+        <div className="bg-black min-h-screen text-white flex justify-center">
+            <div className="w-full max-w-[1100px]">
 
-            <h3>Target Pose: {targetPose}</h3>
-            <h3>Detected Pose: {detected || "None"}</h3>
+                {/* Navbar */}
+                <Navbar />
 
-            {/*<h3>State: {state}</h3>*/}
-            <h3>Hold Time: {time}s</h3>
+                {/* <button onClick={() => {
+                    nextPose();
+                } }>Next pose</button> */}
 
-            <h3>Phase: {phase}</h3>
-            <h3>completed: {completed ? "true":"false"}</h3>
-
-            {/* <h3>Status:
-                {!locked && "Get into position"}
-                {locked && !completed && "Hold the pose..."}
-                {completed && "Pose Complete "}
-            </h3>*/}
-
-            {/*netx pose button
-            {completed && (
-                <button
-                    onClick={() => {
-                        nextPose();
-
-                        // reset state
-                        setLocked(false);
-                        setCompleted(false);
-                        setTime(0);
-                        startRef.current = null;
-                    }}
-                >
-                    Next Pose
-                </button>
-            )}
-
-            */}
-
-            {/* <p>{completed ? "You can move on whenever you're ready" : `${5 - time}s remaining`}</p> */}
-
-            {/*  feedback to improve form 
-
-            {feedback && feedback.length > 0 && (
-                <div style={{
-                    background: "black",
-                    color: "white",
-                    padding: "10px",
-                    marginTop: "10px"
-                }}>
-                    <h4>Fix your form:</h4>
-                    {feedback.map((f, i) => (
-                        <p key={i}>• {f}</p>
-                    ))}
+                {/* Header */}
+                <div className="text-center pt-6 pb-4">
+                    <h1 className="text-2xl font-semibold">Yoga Trainer</h1>
+                    <p className="text-gray-400 text-sm mt-1">
+                        Follow guided poses and hold for 10 seconds
+                    </p>
                 </div>
-            )} 
-            */}
 
-            {/*transition instruction*/}
+                {/* Layout */}
+                <div className="px-4 grid md:grid-cols-2 gap-6">
 
-            {phase === "TRANSITION" && (
-                <h2>{transitions[targetPose] || `Move to ${next}`}</h2>
-            )}
-            
+                    {/* Camera */}
+                    <div className="bg-zinc-900 rounded-xl p-3 flex items-center justify-center">
+                        <Camera onPose={handlePose} />
+                    </div>
 
-            {/* confidence bar */}
+                    {/* Info Panel */}
+                    <div className="flex flex-col gap-4">
 
-            <div style={{
-                width: "100%",
-                height: "20px",
-                background: "gray"
-            }}>
-                <div style={{
-                    width: `${Math.min(confidence * 25, 100)}%`,
-                    height: "100%",
-                    background: "green"
-                }} />
+                        {/* Current Pose */}
+                        <div className="bg-zinc-900 rounded-xl p-5 text-center">
+                            <p className="text-gray-400 text-sm">Target Pose</p>
+                            <h2 className="text-xl font-semibold">{targetPose}</h2>
+
+                            <p className="text-gray-500 text-xs mt-2">
+                                Detected: {detected || "None"}
+                            </p>
+                        </div>
+
+                        {/* Timer */}
+                        <div className="bg-zinc-900 rounded-xl p-5 text-center">
+                            <p className="text-gray-400 text-sm">Hold Time</p>
+                            <h2 className="text-3xl font-bold">{time}s</h2>
+                        </div>
+
+                        {/* Status */}
+                        <div className="bg-zinc-900 rounded-xl p-5 text-center">
+                            <p className="text-gray-400 text-sm">Status</p>
+                            <h2 className="text-sm">
+                                {!locked && "Get into position"}
+                                {locked && !completed && "Hold steady..."}
+                                {completed && "Pose complete"}
+                            </h2>
+                        </div>
+
+                        {/* Transition */}
+                        {phase === "TRANSITION" && (
+                            <div className="bg-yellow-400/20 text-yellow-300 text-sm px-4 py-3 rounded text-center">
+                                Move to {next || "next pose"}
+                            </div>
+                        )}
+
+                        {/* Feedback */}
+                        {feedback.length > 0 && (
+                            <div className="bg-red-500/20 text-red-300 text-sm px-4 py-3 rounded">
+                                <p className="mb-2 font-medium">Fix your form:</p>
+                                {feedback.map((f, i) => (
+                                    <p key={i}>• {f}</p>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Confidence Bar */}
+                        <div>
+                            <p className="text-gray-400 text-sm mb-1">Confidence</p>
+                            <div className="w-full h-2 bg-gray-800 rounded">
+                                <div
+                                    className="h-full bg-green-400 rounded transition-all"
+                                    style={{ width: `${Math.min(confidence * 25, 100)}%` }}
+                                />
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
             </div>
+            {phase === "DONE" && (
+                <div className="fixed inset-0 bg-black flex items-center justify-center z-50">
+                    <div className="bg-zinc-900 p-8 rounded-xl text-center max-w-md w-full">
 
-            <Camera onPose={handlePose} />
+                        <h1 className="text-3xl font-bold text-green-400 mb-2">
+                            Workout Complete 
+                        </h1>
 
+                        <p className="text-gray-400 text-sm mb-6">
+                            Great job! You've finished the guided yoga section.
+                        </p>
 
-             
-                <div style={{
-                position: "fixed",
-                bottom: 0,
-                left: 0,
-                right: 0,
-                background: "black",
-                color: "lime",
-                padding: "10px",
-                fontSize: "12px",
-                zIndex: 9999
-            }}>
-                <div>State: {debug.state}</div>
-               {/* <div>Detected: {debug.detectedPose}</div>
-                <div>Ref: {debug.ref}</div> */}
-                <div>Target: {debug.targetPose}</div>
-                {/* <div>Confidence: {debug.confidence?.toFixed(2)}</div> */}
-                <div>Locked: {debug.locked ? "true":"false"}</div>
-                <div>Phase: {debug.phase}</div>
-                <div>completed: {debug.completed ? "true":"false"}</div>
-                <div>Duration: {debug.time}</div>
-
-                
-                {/*  {debug.feedback?.map((f, i) => (
-                    <div key={i}>• {f}</div>
-                ))} */}
-
-
+                        <div className="space-y-2 text-sm text-gray-300 mb-6">
+                            <p>Time held last pose: {time}s</p>
+                            <p>Confidence: {Math.round(confidence * 100)}%</p>
+                        </div>
+                        <div className = "flex gap-4 justify-center">
+                        <button
+                            onClick={() => {
+                                setStep(0);
+                                setPhase("POSE");
+                                setCompleted(false);
+                                setLocked(false);
+                                setTime(0);
+                                setConfidence(0);
+                                setFeedback([]);
+                                lockedRef.current = false;
+                                completedRef.current = false;
+                                phaseRef.current = "POSE";
+                            }}
+                            className="bg-green-500 hover:bg-green-600 text-black px-6 py-2 rounded-lg font-semibold"
+                        >
+                            Restart Workout
+                        </button>
+                        
+                            <Link to="/"><button className="bg-green-500 hover:bg-green-600 text-black px-6 py-2 rounded-lg font-semibold">Home</button></Link>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
-            
-            
-        </div>
+
     );
 }

@@ -59,3 +59,10 @@ def leaderboard(request):
     ]
 
     return Response(data)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def current_user(request):
+    return Response({
+        "username": request.user.username
+    })
