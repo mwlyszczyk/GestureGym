@@ -10,7 +10,7 @@ export default function Leaderboard() {
     useEffect(() => {
         const fetchLeaderboard = async () => {
             try {
-                const res = await axios.get("http://localhost:8000/api/leaderboard/");
+                const res = await axios.get("https://backend10232002.ngrok.app/api/leaderboard/");
                 setScores(res.data);
             } catch (err) {
                 console.error(err);

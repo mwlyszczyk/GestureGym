@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import Camera from "../camera.jsx";
 import pushupEngine from "../logic/pushupLogic.jsx";
@@ -59,6 +60,8 @@ export default function Pushup() {
         }
     }
 
+    const navigate = useNavigate();
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -71,7 +74,7 @@ export default function Pushup() {
 
         try {
             await axios.post(
-                "http://localhost:8000/api/submit-score/",
+                "https://backend10232002.ngrok.app/api/submit-score/",
                 { score: parseInt(reps) },
                 {
                     headers: {
@@ -82,6 +85,7 @@ export default function Pushup() {
 
             setMessage("Score submitted!");
             setReps(0);
+            navigate("/Leaderboard");
         } catch (err) {
             setMessage(
                 "Error: " +
@@ -95,7 +99,9 @@ export default function Pushup() {
             <div className="w-full max-w-[1000px]">
 
                 {/* Navbar */}
+                <div className="hidden md:block">
                 <Navbar />
+                </div>
 
                 {/* Header */}
                 <div className="text-center pt-6 pb-4">

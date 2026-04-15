@@ -1,74 +1,80 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import "../App.css";
 
 export default function Login() {
-    const [username, setUsername] = useState("");
-    const [password, setPassword] = useState("");
-    const [message, setMessage] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
 
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
-    const API_URL = "https://untroubled-meg-unflinchingly.ngrok-free.dev";
-   
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setMessage("");
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    try {
+      const res = await axios({
+        method: "post",
+        url: "https://backend10232002.ngrok.app/api/login/",
+        data: {
+          username: username.trim(),
+          password: password.trim(),
+        },
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
-        try {
-            const res = await axios({
-                method: "post",
-                url: "http://localhost:8000/api/login/",
-                data: {
-                    username: username.trim(),
-                    password: password.trim(),
-                },
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            });
+      localStorage.setItem("token", res.data.access);
+      setMessage("Login successful!");
+      setTimeout(() => navigate("/"), 700);
+    } catch (err) {
+      setMessage(
+        "Login failed. Make sure the backend is running and your credentials are correct."
+      );
+    }
+  };
 
-            localStorage.setItem("token", res.data.access);
-            alert("Logged in!");
-            navigate("/")
-        } catch (err) {
-            alert("ERROR: " + JSON.stringify(err.response?.data));
-        }
-    };
+  return (
+    <div className="auth-page">
+      <div className="auth-card">
+        <h2 className="auth-title">Sign In</h2>
+        <p className="auth-subtitle">Welcome back to GestureGym</p>
 
-    return (
-        <div style={{ maxWidth: "400px", margin: "50px auto", textAlign: "center" }}>
-            <h2 style={{color: "white"} }>Login</h2>
+        <form onSubmit={handleSubmit}>
+          <label className="auth-label">Username</label>
+          <input
+            className="auth-input"
+            type="text"
+            placeholder="Enter your username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+          />
 
-            <form onSubmit={handleSubmit}>
-                <div>
-                    <input
-                        type="text"
-                        placeholder="Username"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        required
-                        style={{ width: "100%", padding: "10px", margin: "10px 0" }}
-                    />
-                </div>
+          <label className="auth-label">Password</label>
+          <input
+            className="auth-input"
+            type="password"
+            placeholder="Enter your password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
 
-                <div>
-                    <input
-                        type="password"
-                        placeholder="Password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        style={{ width: "100%", padding: "10px", margin: "10px 0" }}
-                    />
-                </div>
+          <button type="submit" className="primary-btn">
+            Sign In
+          </button>
+        </form>
 
-                <button type="submit" style={{ padding: "10px 20px" }}>
-                    Login
-                </button>
-            </form>
+        {message && <div className="message-box">{message}</div>}
 
-            {message && <p>{message}</p>}
+        <div className="auth-footer-link">
+          Don’t have an account? <Link to="/Register">Register</Link>
         </div>
-    );
+      </div>
+    </div>
+  );
 }

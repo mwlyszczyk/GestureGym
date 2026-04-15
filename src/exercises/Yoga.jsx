@@ -141,8 +141,9 @@ export default function Yoga() {
         <div className="bg-black min-h-screen text-white flex justify-center">
             <div className="w-full max-w-[1100px]">
 
-                {/* Navbar */}
-                <Navbar />
+                <div className="hidden md:block">
+                    <Navbar />
+                </div>
 
                 {/* <button onClick={() => {
                     nextPose();

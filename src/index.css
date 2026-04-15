@@ -2,6 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body, #root {
-  background-color: black;
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  background: #000;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    Roboto, Helvetica, Arial, sans-serif;
+  color: white;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
 }

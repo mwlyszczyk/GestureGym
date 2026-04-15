@@ -1,124 +1,80 @@
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
-import axios from "axios";
-import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import Navbar from "../components/Navbar";
+import "./Home.css";
+
 export default function Home() {
+  return (
+    <div className="page-shell">
+      <Navbar />
 
-
-  
-
-    return (
-        <div className="bg-black min-h-screen flex justify-center text-white" style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', Roboto, Helvetica, Arial, sans-serif" }}>
-            {/* Mobile Frame */}
-            <div className="w-full max-w-[screen] text-white">
-
-
-
-                {/* Navbar */}
-                <Navbar />
-
-                {/* Hero */}
-                <div className="text-center pt-6 pb-6 max-w-[500px] mx-auto">
-                    <h1 className="text-[28px] font-semibold tracking-tight">GestureGym</h1>
-                    <p className="!text-yellow-400 text-[13px] mt-1 tracking-tight">gesture based fitness at home</p>
-                </div>
-
-                {/* Section */}
-                <div className="px-4 max-w-[1000px] mx-auto">
-                    <h2 className="text-[16px] font-medium mb-3">Ladders</h2>
-
-                    {/* Pushup Card */}
-                    <div className="relative mb-4">
-                       <Link to="/Leaderboard"> <img
-                            src="https://images.unsplash.com/photo-1764426445448-95103b0024a6?q=80&w=1467&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                            alt="pushups"
-                            className="w-full h-[300px] md:h-auto object-cover md:object-contain rounded-md"
-                        /> </Link> 
-                       <Link to="/Leaderboard"><button className="absolute top-2 left-2 bg-black/70 px-3 py-1 rounded text-[14px] font-semibold">
-                            Daily Push-ups
-                        </button></Link>
-                    </div>
-
-                    {/* Yoga Card */}
-                    <div className="relative mb-4">
-                       <Link to="/Yoga"> <img
-                            src="https://images.unsplash.com/photo-1552196563-55cd4e45efb3"
-                            alt="yoga"
-                            className="w-full h-[300px] md:h-auto object-cover md:object-contain rounded-md"
-                        /> </Link>
-                        <Link to="/Yoga"><button className="absolute top-2 left-2 bg-black/70 px-3 py-1 rounded text-[14px] font-semibold">
-                            Guided Yoga
-                        </button></Link>
-                    </div>
-
-                    {/* Grid
-                    <div className="grid grid-cols-2 gap-3">
-
-                        https://images.unsplash.com/photo-1599058917212-d750089bc07e
-                        <Card title="Weekly Squat" img="https://images.unsplash.com/photo-1594737625785-c5cbb5f5d7d5" />
-                        <Card title="February Yoga Challenge" img="https://images.unsplash.com/photo-1552196563-55cd4e45efb3" />
-                        <Card title="Monday Mobility" img="https://images.unsplash.com/photo-1558611848-73f7eb4001a1" />
-                        <Card title="Monthly Pull ups" img="https://images.unsplash.com/photo-1598971639058-a5d7b39c9c1a" />
-                    </div> 
-                    */}
-                </div>
-
-                {/* Footer
-                <div className="mt-6 border-t border-gray-800 px-4 pt-4 pb-6 grid grid-cols-3 gap-4 text-[11px] text-white">
-                    <div className="space-y-1">
-                        <p className="text-white font-medium text-[12px] mb-1">Use cases</p>
-                        <p>UI design</p>
-                        <p>UX design</p>
-                        <p>Wireframing</p>
-                        <p>Diagramming</p>
-                    </div>
-                    <div className="space-y-1">
-                        <p className="text-white font-medium text-[12px] mb-1">Explore</p>
-                        <p>Design</p>
-                        <p>Prototyping</p>
-                        <p>Development</p>
-                        <p>Collaboration</p>
-                    </div>
-                    <div className="space-y-1">
-                        <p className="text-white font-medium text-[12px] mb-1">Resources</p>
-                        <p>Blog</p>
-                        <p>Best practices</p>
-                        <p>Colors</p>
-                        <p>Support</p>
-                    </div>
-                </div>
-                */}
-            </div>
+      <div className="page-container">
+        <div className="text-center pt-8 pb-8 max-w-[620px] mx-auto">
+          <h1 className="text-[40px] md:text-[54px] font-bold tracking-tight">
+            GestureGym
+          </h1>
+          <p className="text-yellow-400 text-[16px] md:text-[18px] mt-2">
+            Gesture based fitness at home
+          </p>
+          <p className="text-gray-300 text-[15px] mt-4 leading-7">
+            Train with motion-powered workouts, daily challenges, and interactive
+            exercise experiences right from your browser.
+          </p>
         </div>
-    );
-}
 
-function Card({ title, img }) {
-    return (
-        <div className="relative">
-            <img
-                src={img}
-                alt={title}
-                className="w-full h-[100px] object-cover rounded-md"
-            />
-            <div className="absolute top-1.5 left-1.5 bg-black/70 px-2 py-[2px] rounded text-[10px] font-medium leading-tight">
-                {title}
-            </div>
+        <div className="max-w-[1100px] mx-auto">
+                  {/*<div className="flex items-center justify-between mb-4">
+            <h2 className="text-[22px] font-semibold">Featured Workouts</h2>
+            <Link
+              to="/ExerciseSelect"
+              className="text-yellow-400 font-medium hover:text-yellow-300"
+            >
+              See all
+            </Link>
+          </div> */}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Link to="/Pushup" className="group">
+              <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-neutral-900">
+                <img
+                  src="https://images.unsplash.com/photo-1764426445448-95103b0024a6?q=80&w=1467&auto=format&fit=crop"
+                  alt="pushups"
+                  className="w-full h-[360px] object-cover group-hover:scale-[1.03] transition duration-300"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+                <div className="absolute top-4 left-4 bg-yellow-400 text-black text-sm font-bold px-3 py-1 rounded-full">
+                  Daily Challenge
+                </div>
+                <div className="absolute bottom-5 left-5">
+                  <h3 className="text-2xl font-bold">Daily Push-ups</h3>
+                  <p className="text-sm text-gray-200 mt-1">
+                    Test your reps and compete on the leaderboard
+                  </p>
+                </div>
+              </div>
+            </Link>
+
+            <Link to="/Yoga" className="group">
+              <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-neutral-900">
+                <img
+                  src="https://images.unsplash.com/photo-1552196563-55cd4e45efb3"
+                  alt="yoga"
+                  className="w-full h-[360px] object-cover group-hover:scale-[1.03] transition duration-300"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+                <div className="absolute top-4 left-4 bg-white text-black text-sm font-bold px-3 py-1 rounded-full">
+                  Guided Session
+                </div>
+                <div className="absolute bottom-5 left-5">
+                  <h3 className="text-2xl font-bold">Guided Yoga</h3>
+                  <p className="text-sm text-gray-200 mt-1">
+                    Follow a calmer movement-based routine from home
+                  </p>
+                </div>
+              </div>
+            </Link>
+          </div>
         </div>
-    );
-}
-
-function About() {
-    return <div className="p-4 text-white">About Page</div>;
-}
-
-export function AppWrapper() {
-    return (
-        <Router>
-            <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/about" element={<About />} />
-            </Routes>
-        </Router>
-    );
+      </div>
+    </div>
+  );
 }
