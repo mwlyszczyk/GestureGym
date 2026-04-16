@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Camera from "../camera.jsx";
-import pushupEngine from "../logic/pushupLogic.jsx";
+import createPushupEngine from "../logic/pushupLogic.jsx";
 import axios from "axios";
 import Navbar from "../components/Navbar";
 
@@ -15,6 +15,10 @@ const ErrPopup = ({ err }) => {
     );
 };
 
+
+
+
+
 let prevState = "";
 let prevForm = "";
 
@@ -24,8 +28,18 @@ export default function Pushup() {
     const [form, setForm] = useState("");
     const [message, setMessage] = useState("");
 
+    const engineRef = useRef(null);
+
+ 
+   
+
     function handlePose(landmarks) {
-        const result = pushupEngine(landmarks);
+
+        if (!engineRef.current) {
+            engineRef.current = createPushupEngine();
+        }
+
+        const result = engineRef.current(landmarks);
 
         if (prevState !== result.state) {
             switch (result.state) {
@@ -84,7 +98,7 @@ export default function Pushup() {
             );
 
             setMessage("Score submitted!");
-            setReps(0);
+            //setReps(0);
             navigate("/Leaderboard");
         } catch (err) {
             setMessage(

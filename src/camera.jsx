@@ -88,7 +88,7 @@ export default function Camera({ onPose }) {
                 if (onPose) {
                     onPose(landmarks);
                 }
-                poseResults.landmarks[0].forEach((point) => {
+                /*poseResults.landmarks[0].forEach((point) => {
                     ctx.beginPath();
                     ctx.arc(
                         point.x * canvas.width,
@@ -99,7 +99,7 @@ export default function Camera({ onPose }) {
                     );
                     ctx.fillStyle = "cyan";
                     ctx.fill();
-                });
+                });*/
             }
 
             animationFrameId = requestAnimationFrame(detect);

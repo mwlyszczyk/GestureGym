@@ -35,6 +35,10 @@ export default function Yoga() {
     const phaseRef = useRef("POSE");
     const transitionStartRef = useRef(null);
     const targetPoseRef = useRef(flow[0]);
+    const feedbackStabilityRef = useRef({});
+    const stableFeedbackRef = useRef([]);
+    const holdConfidenceRef = useRef(0);
+    const lastValidRef = useRef(Date.now());
 
     const targetPose = flow[step];
     const next = step < flow.length - 1 ? flow[step + 1] : null;
@@ -47,11 +51,21 @@ export default function Yoga() {
                 setPhase("DONE");
                 return prev;
             }
+
             return nextStep < flow.length ? nextStep : prev;
         });
     }
 
-    
+    useEffect(() => {
+        targetPoseRef.current = flow[step];
+
+        // RESET per-pose state
+        feedbackStabilityRef.current = {};
+        stableFeedbackRef.current = [];
+        setFeedback([]);
+
+        holdConfidenceRef.current = 0;
+    }, [step]);
 
     useEffect(() => {
         targetPoseRef.current = flow[step];
@@ -94,28 +108,61 @@ export default function Yoga() {
         setState(result.state);
         setDetected(result.detectedPose);
         setConfidence(result.confidence);
-        setFeedback(result.feedback);
+        
+        //Feedback
+        const rawFeedback = result.feedback || [];
+
+        // update stability map
+        rawFeedback.forEach(msg => {
+            feedbackStabilityRef.current[msg] =
+                (feedbackStabilityRef.current[msg] || 0) + 1;
+        });
+
+        // decay missing messages
+        Object.keys(feedbackStabilityRef.current).forEach(msg => {
+            if (!rawFeedback.includes(msg)) {
+                feedbackStabilityRef.current[msg]--;
+            }
+            if (feedbackStabilityRef.current[msg] <= 0) {
+                delete feedbackStabilityRef.current[msg];
+            }
+        });
+
+        // derive stable feedback ONLY
+        const stable = Object.keys(feedbackStabilityRef.current)
+            .filter(msg => feedbackStabilityRef.current[msg] >= 8); //  increase threshold
+
+        stableFeedbackRef.current = stable;
+        if (!lockedRef.current && holdConfidenceRef.current < 0.6) {
+            setFeedback(stable);
+        } else {
+            setFeedback([]);
+        }
+        
 
         // LOST POSE
-        if (result.state !== "HOLDING") {
-            lostFramesRef.current++;
-        } else {
-            lostFramesRef.current = 0;
-        }
-
-        if (lockedRef.current && lostFramesRef.current > 10) {
+        if (lockedRef.current && holdConfidenceRef.current < 0.3) {
             lockedRef.current = false;
             setLocked(false);
             startRef.current = null;
             setTime(0);
         }
 
+
+        const isHolding = result.state === "HOLDING";
+
+        holdConfidenceRef.current =
+            holdConfidenceRef.current * 0.8 + (isHolding ? 1 : 0) * 0.2;
+
         // LOCK POSE
-        if (!lockedRef.current && result.state === "HOLDING") {
+        if (!lockedRef.current && holdConfidenceRef.current > 0.7) {
             lockedRef.current = true;
             startRef.current = Date.now();
             setLocked(true);
         }
+
+
+        
 
         // TIMER
         if (lockedRef.current && startRef.current) {
